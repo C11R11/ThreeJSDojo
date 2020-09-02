@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"workbench.colorTheme": "Dark",
+		"editor.minimap.side": "right",
+		"git.ignoreLimitWarning": true
+	}}
