@@ -10,6 +10,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@types/dat.gui": "^0.7.5",
     "@types/node": "^14.6.2",
     "express": "^4.17.1",
     "http": "0.0.1-security",
