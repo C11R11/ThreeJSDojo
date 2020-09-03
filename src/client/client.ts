@@ -1,5 +1,6 @@
 import * as THREE from '/build/three.module.js'
 import { OrbitControls } from '/jsm/controls/OrbitControls'
+import Stats from '/jsm/libs/stats.module'
 
 const scene: THREE.Scene = new THREE.Scene()
 
@@ -10,8 +11,7 @@ renderer.setSize(window.innerWidth, window.innerHeight)
 document.body.appendChild(renderer.domElement)
 
 const controls = new OrbitControls(camera, renderer.domElement)
-controls.addEventListener('change', render) //this line is unnecessary if you are re-rendering within the animation loop 
-
+controls.addEventListener('change', render) 
 
 const geometry: THREE.BoxGeometry = new THREE.BoxGeometry()
 const material: THREE.MeshBasicMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true })
@@ -29,17 +29,24 @@ function onWindowResize() {
     render()
 }
 
-// var animate = function () {
-//     requestAnimationFrame(animate)
+const stats = Stats()
+document.body.appendChild(stats.dom)
 
-//     cube.rotation.x += 0.01;
-//     cube.rotation.y += 0.01;
+var animate = function () {
+    requestAnimationFrame(animate)
 
-//     renderer.render(scene, camera)
-// };
+    // cube.rotation.x += 0.01;
+    // cube.rotation.y += 0.01;
+
+    render()
+
+    stats.update()
+};
 
 function render() {
+    stats.begin()
     renderer.render(scene, camera)
+    stats.end()
 }
 render()
 //animate();
