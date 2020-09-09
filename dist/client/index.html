@@ -2,27 +2,30 @@
 <html>
 
 <head>
-    <title>Three.js TypeScript Tutorials by Sean Bradley</title>
+    <title>Sandbox</title>
     <style>
-        body {
-            overflow: hidden;
-            margin: 0px;
-        }
-        #debug1 {
+        .c {
+            width: 300px;
+            height: 300px;
+        }        
+        #top-camera
+        {
             position: absolute;
-            left: 0px;
-            top: 50px;
-            border: 1px solid red;
-            width: 170px;
-            height: 400px;
-            color: white;
-            pointer-events: none;
+            top:315px;
+            left:10px;
+            width: 1000px;
+            height: 600px;
+            clear: both;
+            float: left;
         }
     </style>
 </head>
 
 <body>
-    <div id="debug1"></div>
+    <canvas id="c1" class="c"></canvas>
+    <canvas id="c2" class="c"></canvas>
+    <canvas id="top-camera"></canvas>
+    <!--<canvas id="c4" class="c"></canvas> -->
     <script type="module" src="client.js"></script>
 </body>
 
