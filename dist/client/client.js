@@ -1,6 +1,8 @@
 import * as THREE from '/build/three.module.js';
 import { OrbitControls } from '/jsm/controls/OrbitControls';
 import { GUI } from '/jsm/libs/dat.gui.module';
+import { SceneUtils } from '/jsm/utils/SceneUtils';
+import { DecalGeometry } from "/jsm/geometries/DecalGeometry";
 const gui = new GUI();
 const scene = new THREE.Scene();
 const camera1 = new THREE.PerspectiveCamera(50, 1, 0.1, 60);
@@ -59,7 +61,16 @@ scene.add(gridHelper);
 const controls = new OrbitControls(camera3, renderer3.domElement);
 //const controls2 = new OrbitControls(camera2, renderer2.domElement)
 const geometry = new THREE.BoxGeometry(10, 10, 10);
-const material = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true });
+const material = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.3 });
+let uniforms = {
+    colorB: { type: 'vec3', value: new THREE.Color(0xACB6E5) },
+    colorA: { type: 'vec3', value: new THREE.Color(0x74ebd5) }
+};
+let materialShared = new THREE.ShaderMaterial({
+    uniforms: uniforms,
+    fragmentShader: fragmentShader(),
+    vertexShader: vertexShader(),
+});
 const materialFolder = gui.addFolder('THREE.Material');
 var options = {
     side: {
@@ -82,12 +93,193 @@ materialFolder.add(material, 'visible');
 materialFolder.add(material, 'side', options.side).onChange(() => updateMaterial());
 materialFolder.open();
 const cube = new THREE.Mesh(geometry, material);
-cube.position.y = 5;
+//cube.position.y = 5
 scene.add(cube);
+var materialLine = new THREE.LineBasicMaterial({
+    color: 0x0000ff
+});
+var points = [];
+points.push(new THREE.Vector3(-10, 0, 1));
+points.push(new THREE.Vector3(-10, 5, -1));
+points.push(new THREE.Vector3(-10, 7.4, 4));
+var geometryLine = new THREE.BufferGeometry().setFromPoints(points);
+var line = new THREE.Line(geometryLine, materialLine);
+scene.add(line);
 function updateMaterial() {
     material.side = Number(material.side);
     material.combine = Number(material.combine);
     material.needsUpdate = true;
+}
+var geometryPlane = new THREE.PlaneGeometry(5, 20, 32);
+var materialPlane = new THREE.MeshBasicMaterial({ color: 0xffff00, side: THREE.DoubleSide });
+var plane = new THREE.Mesh(geometryPlane, materialPlane);
+plane.position.set(10, 0, 0);
+plane.rotateY(Math.PI / 2);
+scene.add(plane);
+var direction = new THREE.Vector3();
+var far = new THREE.Vector3();
+var intersects;
+var objects = [];
+objects.push(cube);
+const raycaster = new THREE.Raycaster();
+raycaster.set(line.position, direction.subVectors(plane.position, line.position).normalize());
+//raycaster.far = far.subVectors(plane.position, line.position).length(); // comment this line to have an infinite ray
+intersects = raycaster.intersectObject(cube);
+console.log(intersects);
+for (let i = 0; i < intersects.length; i++) {
+    intersects[i].object.material.color.set(Math.random() * 0xffffff);
+}
+var meshA = new THREE.Mesh(new THREE.PlaneGeometry(2, 3), new THREE.MeshBasicMaterial({
+    color: "blue",
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: .5
+}));
+meshA.position.set(15, 0, 2);
+scene.add(meshA);
+var meshB = new THREE.Mesh(new THREE.SphereGeometry(2.5, 16, 12), new THREE.MeshBasicMaterial({
+    color: "red"
+}));
+meshB.position.set(15, 0, -3);
+scene.add(meshB);
+var points = [];
+for (let i = -3; i <= 3; i++) {
+    let point = new THREE.Vector3().copy(meshA.position).setComponent(1, i);
+    points.push(point);
+    let p = new THREE.Mesh(new THREE.SphereGeometry(.125, 4, 2), new THREE.MeshBasicMaterial({
+        color: "orange",
+        wireframe: true
+    }));
+    p.position.copy(point);
+    scene.add(p);
+}
+document.getElementById("pressme").addEventListener("click", getIntersections, false);
+var raycaster2 = new THREE.Raycaster();
+var direction = new THREE.Vector3(0, 0, -1);
+var intersects;
+function getIntersections() {
+    points.forEach(p => {
+        raycaster2.set(p, direction);
+        intersects = raycaster2.intersectObject(meshB);
+        if (intersects.length > 0) {
+            let pI = intersects[0].point; //this is the point of intersection in world coordinates
+            console.log(pI);
+            // visualization
+            let lineGeom = new THREE.Geometry();
+            lineGeom.vertices.push(p, pI);
+            let line = new THREE.Line(lineGeom, new THREE.LineBasicMaterial({
+                color: "yellow"
+            }));
+            scene.add(line);
+            let pointI = new THREE.Mesh(new THREE.SphereGeometry(.125, 4, 2), new THREE.MeshBasicMaterial({
+                color: "white"
+            }));
+            pointI.position.copy(pI);
+            scene.add(pointI);
+        }
+    });
+}
+var geom = new THREE.PlaneGeometry(20, 20, 10, 10);
+geom.vertices.forEach(v => {
+    v.z = THREE.MathUtils.randFloat(-1, 1);
+});
+geom.rotateX(-Math.PI * .5);
+geom.computeFaceNormals();
+geom.computeVertexNormals();
+console.log(cube);
+var decalGeometry = new DecalGeometry(meshA, new THREE.Vector3(0, 1, 0), //position
+new THREE.Euler(-1, 0, 1, 'XYZ'), //direction
+new THREE.Vector3(5, 5, 5) //dimensions
+);
+var decalmaterial = new THREE.MeshBasicMaterial({ color: 0xff00ff });
+var mesh = new THREE.Mesh(decalGeometry, decalmaterial);
+scene.add(mesh);
+function mixVertexShader() {
+    return `
+  varying vec2 vPos;
+  void main() {
+    vPos = position.xz;
+    gl_Position = projectionMatrix *
+                  modelViewMatrix *
+                  vec4(position,1.0);
+  }
+`;
+}
+function MixFragmentShader() {
+    return `
+  uniform vec3 center;
+  uniform vec2 size;
+  uniform float lineHalfWidth;
+  
+  varying vec2 vPos;
+  
+  void main() {
+    vec2 Ro = size * .5;
+    vec2 Uo = abs( vPos - center.xz ) - Ro;
+    
+    vec3 c = mix(vec3(1.), vec3(1.,0.,0.), float(abs(max(Uo.x,Uo.y)) < lineHalfWidth));
+    
+    gl_FragColor = vec4(c, 0.5  );
+  }
+  
+`;
+}
+var newuniforms = {
+    center: {
+        value: new THREE.Vector3(-6, 0, 0)
+    },
+    size: {
+        value: new THREE.Vector2(1, 1)
+    },
+    lineHalfWidth: {
+        value: 2
+    }
+};
+var matShader = new THREE.ShaderMaterial({
+    uniforms: newuniforms,
+    vertexShader: mixVertexShader(),
+    fragmentShader: MixFragmentShader()
+});
+var matWire = new THREE.MeshBasicMaterial({
+    color: "gray",
+    wireframe: true
+});
+var obj = SceneUtils.createMultiMaterialObject(geom, [matShader, matWire]);
+obj.position.set(-30, 0, 0);
+scene.add(obj);
+var mouse = new THREE.Vector2();
+var point = new THREE.Vector3();
+// window.addEventListener("mousemove", function(event) {
+//   mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+//   mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+//   raycaster.setFromCamera(mouse, camera3);
+//   intersects = raycaster.intersectObject(obj, true);
+//   if (intersects.length === 0) return;
+//   obj.worldToLocal(point.copy(intersects[0].point));
+//   newuniforms.center.value.copy(point);
+// }, false);
+function vertexShader() {
+    return `
+    varying vec3 vUv; 
+
+    void main() {
+      vUv = position; 
+
+      vec4 modelViewPosition = modelViewMatrix * vec4(position, 1.0);
+      gl_Position = projectionMatrix * modelViewPosition; 
+    }
+  `;
+}
+function fragmentShader() {
+    return `
+uniform vec3 colorA; 
+uniform vec3 colorB; 
+varying vec3 vUv;
+
+void main() {
+  gl_FragColor = vec4(mix(colorA, colorB, vUv.x), 1.0);
+}
+`;
 }
 const cubeFolder = gui.addFolder("Cube");
 cubeFolder.add(cube.rotation, "x", 0, Math.PI * 2, 0.01).name("rotation-x");
@@ -117,8 +309,8 @@ axesHelper.position.set(0, 0, 0);
 scene.add(axesHelper);
 var animate = function () {
     requestAnimationFrame(animate);
-    cube.rotation.x += 0.01;
-    cube.rotation.y += 0.01;
+    // cube.rotation.x += 0.01;
+    // cube.rotation.y += 0.01;
     controls.update();
     // controls2.update()
     renderer1.render(scene, camera1);
