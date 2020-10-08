@@ -1,6 +1,6 @@
 # ThreeJSDojo
 
-[To Read and stydy](links.md)
+[To Read and study](links.md)
 
 All threejs code for learning in Node js
 
